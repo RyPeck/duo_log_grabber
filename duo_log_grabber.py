@@ -46,11 +46,11 @@ def print_cef(func):
 
 
 @print_cef
-def send_syslog(cef):
+def send_syslog(msg):
     '''
     Sends syslog messages to the server specified in conf.ini.
     '''
-    l.emit(cef)
+    l.emit(msg)
 
 
 def log_to_cef(entry, entry_type):
@@ -111,11 +111,12 @@ def log_to_csv(entry, entry_type):
 
     Order for each event is as specified by the order variable
     """
-
+    # Send timestamp for the entry to syslog
     timestamp = time.strftime('%b %d %H:%M:%S',
                               time.localtime(entry['timestamp']))
 
     if entry_type == "admin_log":
+        # TODO build out admin_log csv
         return
     elif entry_type == "auth_log":
         data = {
