@@ -27,6 +27,7 @@ import ConfigParser
 import duo_client
 from loggerglue.emitter import UDPSyslogEmitter
 import socket
+import time
 
 
 def print_cef(func):
@@ -52,21 +53,103 @@ def send_syslog(cef):
     l.emit(cef)
 
 
-def log_to_cef(eventtype, action, **kwargs):
+def log_to_cef(entry, entry_type):
     '''
     Args are formatted as a CEF-compliant message and then
     passed to send_syslog().
     '''
+    eventtype = entry['eventtype']
+
+    # For auth logs these are the same for some reason...
+    if entry_type == "admin_log":
+        action = entry['action']
+
+        # timestamp is converted to milliseconds for CEF
+        # repr is used to keep '\\' in the domain\username
+        extension = {
+            'duser=': repr(entry['username']).strip("u'"),
+            'rt=': str(entry['timestamp']*1000),
+            'description=': str(entry.get('description')),
+            'dhost=': entry['host'],
+        }
+
+    elif entry_type == "auth_log":
+        action = entry['eventtype']
+
+        # timestamp is converted to milliseconds for CEF
+        # repr is used to keep '\\' in the domain\username
+        extension = {
+            'rt=': str(entry['timestamp']*1000),
+            'src=': entry['ip'],
+            'dhost=': entry['host'],
+            'duser=': repr(entry['username']).strip("u'"),
+            'outcome=': entry['result'],
+            'cs1Label=': 'new_enrollment',
+            'cs1=': str(entry['new_enrollment']),
+            'cs2Label=': 'factor',
+            'cs2=': entry['factor'],
+            'ca3Label=': 'integration',
+            'cs3=': entry['integration'],
+        }
+
     header = '|'.join([CEF_VERSION, VENDOR, PRODUCT, VERSION,
                       eventtype, action, SEVERITY]) + '|'
-    extension = []
-    for key in kwargs:
-        extension.extend([key + kwargs[key]])
 
-    msg = header + ' '.join(extension)
+    extension_list = []
+    for key in extension:
+        extension_list.extend([key + extension[key]])
+
+    msg = header + ' '.join(extension_list)
     cef = ' '.join([syslog_header, msg])
 
     send_syslog(cef)
+
+
+def log_to_csv(entry, entry_type):
+    """
+    Log an event in comma separated format
+
+    Order for each event is as specified by the order variable
+    """
+
+    timestamp = time.strftime('%b %d %H:%M:%S',
+                              time.localtime(entry['timestamp']))
+
+    if entry_type == "admin_log":
+        return
+    elif entry_type == "auth_log":
+        data = {
+            'timestamp': timestamp,
+            'ip': entry['ip'],
+            'factor': entry['factor'],
+            'user': repr(entry['username']).strip("u'"),
+            'result': entry['result'],
+            'integration': entry['integration'],
+            }
+
+        order = [
+            'timestamp',
+            'ip',
+            'factor',
+            'user',
+            'result',
+            'integration',
+            ]
+
+    syslog_line = ','.join([data[x] for x in order])
+    print(syslog_line)
+
+    send_syslog(syslog_line)
+
+
+def log_event(entry, entry_type):
+    """
+    Log an individual entry
+    """
+    if LOG_METHOD == "cef":
+        log_to_cef(entry, entry_type)
+    elif LOG_METHOD == "csv":
+        log_to_csv(entry, entry_type)
 
 
 def get_logs(proxy=None, proxy_port=None):
@@ -92,35 +175,10 @@ def get_logs(proxy=None, proxy_port=None):
         auth_log = admin_api.get_authentication_log(mintime=mintime)
 
     for entry in admin_log:
-        # timestamp is converted to milliseconds for CEF
-        # repr is used to keep '\\' in the domain\username
-        extension = {
-            'duser=': repr(entry['username']).strip("u'"),
-            'rt=': str(entry['timestamp']*1000),
-            'description=': str(entry.get('description')),
-            'dhost=': entry['host'],
-        }
-
-        log_to_cef(entry['eventtype'], entry['action'], **extension)
+        log_event(entry, 'admin_log')
 
     for entry in auth_log:
-        # timestamp is converted to milliseconds for CEF
-        # repr is used to keep '\\' in the domain\username
-        extension = {
-            'rt=': str(entry['timestamp']*1000),
-            'src=': entry['ip'],
-            'dhost=': entry['host'],
-            'duser=': repr(entry['username']).strip("u'"),
-            'outcome=': entry['result'],
-            'cs1Label=': 'new_enrollment',
-            'cs1=': str(entry['new_enrollment']),
-            'cs2Label=': 'factor',
-            'cs2=': entry['factor'],
-            'ca3Label=': 'integration',
-            'cs3=': entry['integration'],
-        }
-
-        log_to_cef(entry['eventtype'], entry['eventtype'], **extension)
+        log_event(entry, 'auth_log')
 
 if __name__ == "__main__":
     try:
@@ -147,6 +205,8 @@ if __name__ == "__main__":
 
         SYSLOG_SERVER = config.get('syslog', 'SYSLOG_SERVER')
         SYSLOG_PORT = config.getint('syslog', 'SYSLOG_PORT')
+
+        LOG_METHOD = config.get('logging', 'LOG_METHOD')
 
         DEBUG = config.getboolean('debug', 'DEBUG')
         DEBUG_FILE = config.get('debug', 'DEBUG_FILE')
