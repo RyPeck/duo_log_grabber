@@ -17,8 +17,9 @@ a header, and an extension, as shown here:
 
     Sep 19 08:26:10 host CEF:0|Security|threatmanager|1.0|100|worm
     successfully stopped|10|src=10.0.0.1 dst=2.1.2.2 spt=1232
-
 '''
+
+
 from __future__ import print_function
 from datetime import datetime
 import calendar
@@ -26,6 +27,7 @@ import ConfigParser
 import duo_client
 from loggerglue.emitter import UDPSyslogEmitter
 import socket
+
 
 def print_cef(func):
     '''
@@ -49,6 +51,7 @@ def send_syslog(cef):
     '''
     l.emit(cef)
 
+
 def log_to_cef(eventtype, action, **kwargs):
     '''
     Args are formatted as a CEF-compliant message and then
@@ -59,10 +62,10 @@ def log_to_cef(eventtype, action, **kwargs):
     extension = []
     for key in kwargs:
         extension.extend([key + kwargs[key]])
-    
+
     msg = header + ' '.join(extension)
     cef = ' '.join([syslog_header, msg])
-    
+
     send_syslog(cef)
 
 
@@ -76,7 +79,7 @@ def get_logs(proxy=None, proxy_port=None):
         ikey=INTEGRATION_KEY,
         skey=SECRET_KEY,
         host=API_HOST)
-    
+
     if proxy and proxy_port:
         admin_api.set_proxy(proxy, proxy_port)
 
@@ -155,7 +158,7 @@ if __name__ == "__main__":
         syslog_date = datetime.now()
         syslog_date_time = syslog_date.strftime("%b %d %I:%M:%S")
         syslog_header = ' '.join([syslog_date_time, HOSTNAME])
-        
+
         l = UDPSyslogEmitter(address=(SYSLOG_SERVER, SYSLOG_PORT))
 
         if PROXY_ENABLE:
