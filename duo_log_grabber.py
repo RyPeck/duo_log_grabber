@@ -73,7 +73,7 @@ def get_logs(proxy=None, proxy_port=None):
     '''
     Connects to the DuoSecurity API and grabs the admin
     and auth logs, which are then parsed and passed to
-    log)to_cef().
+    log_to_cef().
     '''
     admin_api = duo_client.Admin(
         ikey=INTEGRATION_KEY,
@@ -166,6 +166,6 @@ if __name__ == "__main__":
         else:
             get_logs()
 
-    except Exception, e:
+    except Exception as e:
         with open('exceptions.log', 'a+') as exception_file:
             print(datetime.utcnow(), e, file=exception_file)
