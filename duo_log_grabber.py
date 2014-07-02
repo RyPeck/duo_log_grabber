@@ -1,4 +1,4 @@
-'''
+"""
 Grabs the administration and authentication logs from the Duo Security
 API and sends CEF-compliant syslog messages.
 
@@ -17,7 +17,20 @@ a header, and an extension, as shown here:
 
     Sep 19 08:26:10 host CEF:0|Security|threatmanager|1.0|100|worm
     successfully stopped|10|src=10.0.0.1 dst=2.1.2.2 spt=1232
-'''
+
+Logging format (CSV):
+For other systems that parse and store syslog, a simple line of CSV is easy
+to parse out. The way fields are comma separated assume that there won't be
+any commas in the fields.
+
+Fields are laid out as follows for a CSV log line:
+
+    timestamp duo_event_type srcip,factor,username,result,integration
+
+Example:
+
+    Jul 02 08:59:44 duo_auth_log 129.21.206.5,Duo Push,sapt,SUCCESS,VPN
+"""
 
 
 from __future__ import print_function
@@ -120,7 +133,6 @@ def log_to_csv(entry, entry_type):
         return
     elif entry_type == "auth_log":
         data = {
-            'timestamp': timestamp,
             'ip': entry['ip'],
             'factor': entry['factor'],
             'user': repr(entry['username']).strip("u'"),
@@ -129,7 +141,6 @@ def log_to_csv(entry, entry_type):
             }
 
         order = [
-            'timestamp',
             'ip',
             'factor',
             'user',
@@ -137,8 +148,8 @@ def log_to_csv(entry, entry_type):
             'integration',
             ]
 
-    syslog_line = ','.join([data[x] for x in order])
-    print(syslog_line)
+    syslog_line = timestamp + ' duo_' + entry_type + ' ' + \
+        ','.join([data[x] for x in order])
 
     send_syslog(syslog_line)
 
