@@ -118,7 +118,7 @@ def log_to_cef(entry, entry_type):
     send_syslog(cef)
 
 
-def log_to_tab(entry, entry_type):
+def log_to_tsv(entry, entry_type):
     """
     Log an event in tab separated values.
 
@@ -173,7 +173,7 @@ def log_event(entry, entry_type):
     if LOG_METHOD == "cef":
         log_to_cef(entry, entry_type)
     elif LOG_METHOD == "tsv":
-        log_to_tab(entry, entry_type)
+        log_to_tsv(entry, entry_type)
 
 
 def get_logs(proxy=None, proxy_port=None):
@@ -249,6 +249,9 @@ if __name__ == "__main__":
             get_logs(proxy=PROXY_SERVER, proxy_port=PROXY_PORT)
         else:
             get_logs()
+        if DEBUG:
+            with open(DEBUG_FILE, 'a+') as debug_file:
+                print("Ran at %s" % date, file=debug_file)
 
     except Exception as e:
         with open('exceptions.log', 'a+') as exception_file:
