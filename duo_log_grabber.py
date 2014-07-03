@@ -18,18 +18,18 @@ a header, and an extension, as shown here:
     Sep 19 08:26:10 host CEF:0|Security|threatmanager|1.0|100|worm
     successfully stopped|10|src=10.0.0.1 dst=2.1.2.2 spt=1232
 
-Logging format (CSV):
-For other systems that parse and store syslog, a simple line of CSV is easy
-to parse out. The way fields are comma separated assume that there won't be
+Logging format (TSV):
+For other systems that parse and store syslog, a simple line of TSV is easy
+to parse out. The way fields are tab separated assume that there won't be
 any commas in the fields.
 
-Fields are laid out as follows for a CSV log line:
+Fields are laid out as follows for a TSV log line - auth_logs:
 
-    timestamp duo_event_type srcip,factor,username,result,integration
+    timestamp\tduo_event_type\tsrcip\tfactor\tusername\tresult\tintegration
 
-Example:
+Example auth_log:
 
-    Jul 02 08:59:44 duo_auth_log 129.21.206.5,Duo Push,sapt,SUCCESS,VPN
+    Jul 02 08:59:44\tduo_auth_log\t129.21.206.5\tDuo Push\tsapt\tSUCCESS\tVPN
 """
 
 
@@ -118,9 +118,9 @@ def log_to_cef(entry, entry_type):
     send_syslog(cef)
 
 
-def log_to_csv(entry, entry_type):
+def log_to_tab(entry, entry_type):
     """
-    Log an event in comma separated format
+    Log an event in tab separated values.
 
     Order for each event is as specified by the order variable
     """
@@ -129,8 +129,20 @@ def log_to_csv(entry, entry_type):
                               time.localtime(entry['timestamp']))
 
     if entry_type == "admin_log":
-        # TODO build out admin_log csv
-        return
+        data = {
+            'duser': repr(entry['username']).strip("u'"),
+            'description': str(entry.get('description')),
+            'dhost': entry['host'],
+            'action': entry['action'],
+        }
+
+        order = [
+            'duser',
+            'dhost',
+            'description',
+            'action',
+            ]
+
     elif entry_type == "auth_log":
         data = {
             'ip': entry['ip'],
@@ -148,8 +160,8 @@ def log_to_csv(entry, entry_type):
             'integration',
             ]
 
-    syslog_line = timestamp + ' duo_' + entry_type + ' ' + \
-        ','.join([data[x] for x in order])
+    syslog_line = timestamp + '\tduo_' + entry_type + '\t' + \
+        '\t'.join([data[x] for x in order])
 
     send_syslog(syslog_line)
 
@@ -160,8 +172,8 @@ def log_event(entry, entry_type):
     """
     if LOG_METHOD == "cef":
         log_to_cef(entry, entry_type)
-    elif LOG_METHOD == "csv":
-        log_to_csv(entry, entry_type)
+    elif LOG_METHOD == "tsv":
+        log_to_tab(entry, entry_type)
 
 
 def get_logs(proxy=None, proxy_port=None):
