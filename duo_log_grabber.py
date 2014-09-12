@@ -80,7 +80,7 @@ def log_to_cef(entry, entry_type):
         # timestamp is converted to milliseconds for CEF
         # repr is used to keep '\\' in the domain\username
         extension = {
-            'duser=': repr(entry['username']).strip("u'"),
+            'duser=': repr(entry['username']).lstrip("u").strip("'"),
             'rt=': str(entry['timestamp']*1000),
             'description=': str(entry.get('description')),
             'dhost=': entry['host'],
@@ -95,7 +95,7 @@ def log_to_cef(entry, entry_type):
             'rt=': str(entry['timestamp']*1000),
             'src=': entry['ip'],
             'dhost=': entry['host'],
-            'duser=': repr(entry['username']).strip("u'"),
+            'duser=': repr(entry['username']).lstrip("u").strip("'"),
             'outcome=': entry['result'],
             'cs1Label=': 'new_enrollment',
             'cs1=': str(entry['new_enrollment']),
@@ -130,7 +130,7 @@ def log_to_tsv(entry, entry_type):
 
     if entry_type == "admin_log":
         data = {
-            'duser': repr(entry['username']).strip("u'"),
+            'duser': repr(entry['username']).lstrip("u").strip("'"),
             'description': str(entry.get('description')),
             'dhost': entry['host'],
             'action': entry['action'],
@@ -147,7 +147,7 @@ def log_to_tsv(entry, entry_type):
         data = {
             'ip': entry['ip'],
             'factor': entry['factor'],
-            'user': repr(entry['username']).strip("u'"),
+            'user': repr(entry['username']).lstrip("u").strip("'"),
             'result': entry['result'],
             'integration': entry['integration'],
             }
